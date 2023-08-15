@@ -1,0 +1,40 @@
+name: build JRuby for testing
+
+runs:
+  using: "composite"
+  steps:
+    - name: checkout
+      uses: actions/checkout@v3
+    - name: set up java 8
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: 8
+        cache: 'maven'
+    - name: Restore bootstrap build
+      id: cache-bootstrap-restore
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          bin
+          core
+          lib
+          shaded
+          test
+        key: ${{ github.sha }}-bootstrap
+    - name: conditional-bootstrap
+      if: ${{ steps.cache-bootstrap-restore.outputs.cache-hit == false }}
+      run: "./mvnw -B -Pbootstrap clean package && bin/jruby --dev -S gem install bundler && bin/jruby --dev -S bundle install"
+      shell: bash
+    - name: Save bootstrap build
+      if: ${{ steps.cache-bootstrap-restore.outputs.cache-hit == false }}
+      id: cache-bootstrap-save
+      uses: actions/cache/save@v3
+      with:
+        path: |
+          bin
+          core
+          lib
+          shaded
+          test
+        key: ${{ github.sha }}-bootstrap
